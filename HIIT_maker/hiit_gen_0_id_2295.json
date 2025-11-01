@@ -1,0 +1,107 @@
+{
+    "program_title": "Intermediate HIIT Full Body Circuit",
+    "total_duration_minutes": 28.5,
+    "warm_up": [
+        {
+            "name": "Jumping Jacks (Light)",
+            "duration": 45,
+            "rest": 15,
+            "type": "cardio/general",
+            "intensity": "low"
+        },
+        {
+            "name": "Dynamic High Knees",
+            "duration": 45,
+            "rest": 15,
+            "type": "cardio/mobility",
+            "intensity": "medium"
+        },
+        {
+            "name": "Arm Circles and Torso Twists",
+            "duration": 60,
+            "rest": 0,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "Alternating Reverse Lunges",
+            "duration": 60,
+            "rest": 30,
+            "type": "strength prep",
+            "intensity": "medium"
+        }
+    ],
+    "main_set": {
+        "type": "Time-Based Circuit (4 Rounds)",
+        "description": "Perform each exercise for 40 seconds followed by 20 seconds rest. Repeat the entire block 4 times.",
+        "rounds": 4,
+        "interval_work": 40,
+        "interval_rest": 20,
+        "exercises": [
+            {
+                "name": "Kettlebell Swing (or Dumbbell Thruster)",
+                "duration": 40,
+                "rest": 20,
+                "type": "strength/cardio",
+                "intensity": "high"
+            },
+            {
+                "name": "Push-ups (Standard or Knee)",
+                "duration": 40,
+                "rest": 20,
+                "type": "strength (upper body)",
+                "intensity": "medium"
+            },
+            {
+                "name": "Alternating Split Jumps (Jump Lunges)",
+                "duration": 40,
+                "rest": 20,
+                "type": "cardio/plyometric",
+                "intensity": "high"
+            },
+            {
+                "name": "Plank with Alternating Leg Lifts",
+                "duration": 40,
+                "rest": 20,
+                "type": "core/stability",
+                "intensity": "medium"
+            },
+            {
+                "name": "Burpee Step-Outs (Modified Burpee)",
+                "duration": 40,
+                "rest": 20,
+                "type": "cardio/full body",
+                "intensity": "high"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Standing Quad Stretch (30s per side)",
+            "duration": 30,
+            "rest": 10,
+            "type": "flexibility/recovery"
+        },
+        {
+            "name": "Triceps Stretch (30s per side)",
+            "duration": 30,
+            "rest": 10,
+            "type": "flexibility/recovery"
+        },
+        {
+            "name": "Seated Hamstring/Lower Back Stretch",
+            "duration": 45,
+            "rest": 15,
+            "type": "flexibility"
+        },
+        {
+            "name": "Child's Pose with Deep Breathing",
+            "duration": 60,
+            "rest": 0,
+            "type": "recovery"
+        }
+    ],
+    "generation": 0,
+    "id": 2295,
+    "name": "HIITProgram"
+}

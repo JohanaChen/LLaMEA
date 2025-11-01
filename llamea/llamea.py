@@ -9,6 +9,7 @@ import os
 import random
 import re
 import traceback
+import json
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
@@ -17,6 +18,9 @@ from joblib import Parallel, delayed
 from .loggers import ExperimentLogger
 from .solution import Solution
 from .utils import NoCodeException, discrete_power_law_distribution, handle_timeout
+
+from HIIT_maker.utils.state import _CHOICE_STATE
+
 
 # TODOs:
 # Implement diversity selection mechanisms (none, prefer short code, update population only when (distribution of) results is different, AST / code difference)
@@ -92,72 +96,81 @@ class LLaMEA:
         self.f = f  # evaluation function, provides an individual as output.
         self.role_prompt = role_prompt
         self.parallel_backend = parallel_backend
+        self.example_prompt = example_prompt or ""
         if role_prompt == "":
-            self.role_prompt = "You are a highly skilled computer scientist in the field of natural computing. Your task is to design novel metaheuristic algorithms to solve black box optimization problems."
+            self.role_prompt = "You are a professional fitness coach who designs high-quality, balanced HIIT workout programs."
         if task_prompt == "":
             self.task_prompt = """
-The optimization algorithm should handle a wide range of tasks, which is evaluated on the BBOB test suite of 24 noiseless functions. Your task is to write the optimization algorithm in Python code to minimize the function value. The code should contain an `__init__(self, budget, dim)` function and the function `def __call__(self, func)`, which should optimize the black box function `func` using `self.budget` function evaluations.
-The func() can only be called as many times as the budget allows, not more. Each of the optimization functions has a search space between -5.0 (lower bound) and 5.0 (upper bound). The dimensionality can be varied.
-
-Give an excellent and novel heuristic algorithm to solve this task.
-"""
+            Design a high-intensity interval training (HIIT) program in JSON format.
+            The program should be 10-40 minutes long in total.Each exercise of the program must include:- The name of the exercise- The duration of the exercise (in seconds)- The rest period after the exercise (in seconds)Include warm-up and cool-down phases and avoid repeating the same exercise too often.
+            The core training should include a balance of cardio, strength, and flexibility exercises.
+            Ensure variety in terms of range of:
+            Types of exercises
+            Training structures (e.g. EMOM, AMRAP, E2MOM, Death-by, Tabata, etc.)
+            Number of repetitions
+            Load and intensity (implicitly controlled via duration and rest).
+            Each generated program doesn't have to contain the same set of exercises, different structures of programs are allowed, such as linear sequence, repeated circuits, or block cycles.
+            Make the program suitable for intermediate-level individuals with moderate fitness.
+            Annotate exercises with a tag like `(type: cardio)` or `(intensity: medium)` to indicate the nature and difficulty of the exercise.
+            The output should be pure JSON and easy-to-read list of exercises, for example:
+            {
+            "warm_up": [
+                { "name": "Jumping Jacks", "duration": 30, "rest": 10, "type": "cardio" },
+                { "name": "Arm Circles", "duration": 20, "rest": 10, "type": "mobility" }
+            ],
+            "main_set": {
+                "type": "EMOM",
+                "rounds": 5,
+                "exercises": [
+                { "name": "Burpees", "duration": 40, "rest": 20, "type": "cardio", "intensity": "high" },
+                { "name": "Push-ups", "duration": 30, "rest": 30, "type": "strength", "intensity": "medium" },
+                { "name": "Jump Squats", "duration": 30, "rest": 20, "type": "strength/cardio" }
+                ]
+            },
+            "cool_down": [
+                { "name": "Forward Fold", "duration": 30, "rest": 10, "type": "flexibility" },
+                { "name": "Child's Pose", "duration": 30, "rest": 10, "type": "recovery" }
+            ]
+            }
+        """
         else:
             self.task_prompt = task_prompt
 
-        if example_prompt == None:
-            self.example_prompt = """
-An example of such code (a simple random search), is as follows:
-```
-import numpy as np
+        self.output_format_prompt = """
+        Only return the HIIT training program in JSON. 
+        Do not include Python code, variable names, markdown, or explanations.
 
-class RandomSearch:
-    def __init__(self, budget=10000, dim=10):
-        self.budget = budget
-        self.dim = dim
-        self.f_opt = np.Inf
-        self.x_opt = None
+        Use the following formatting:
 
-    def __call__(self, func):
-        for i in range(self.budget):
-            x = np.random.uniform(func.bounds.lb, func.bounds.ub)
-            
-            f = func(x)
-            if f < self.f_opt:
-                self.f_opt = f
-                self.x_opt = x
-            
-        return self.f_opt, self.x_opt
-```
-"""
-        else:
-            self.example_prompt = example_prompt
-
-        if output_format_prompt is None:
-            self.output_format_prompt = """
-Provide the Python code and a one-line description with the main idea (without enters). Give the response in the format:
-# Description: <short-description>
-# Code: 
-```python
-<code>
-```
-"""
-            if HPO:
-                self.output_format_prompt = """
-Provide the Python code, a one-line description with the main idea (without enters) and the SMAC3 Configuration space to optimize the code (in Python dictionary format). Give the response in the format:
-# Description: <short-description>
-# Code: 
-```python
-<code>
-```
-Space: <configuration_space>"""
-        else:
-            self.output_format_prompt = output_format_prompt
+        {
+            "warm_up": [
+                { "name": "Jumping Jacks", "duration": 30, "rest": 10, "type": "cardio" },
+                { "name": "Arm Circles", "duration": 20, "rest": 10, "type": "mobility" }
+            ],
+            "main_set": {
+                "type": "EMOM",
+                "rounds": 5,
+                "exercises": [
+                { "name": "Burpees", "duration": 40, "rest": 20, "type": "cardio", "intensity": "high" },
+                { "name": "Push-ups", "duration": 30, "rest": 30, "type": "strength", "intensity": "medium" },
+                { "name": "Jump Squats", "duration": 30, "rest": 20, "type": "strength/cardio" }
+                ]
+            },
+            "cool_down": [
+                { "name": "Forward Fold", "duration": 30, "rest": 10, "type": "flexibility" },
+                { "name": "Child's Pose", "duration": 30, "rest": 10, "type": "recovery" }
+            ]
+            }
+        """
+       
         self.mutation_prompts = mutation_prompts
         self.adaptive_mutation = adaptive_mutation
         if mutation_prompts == None:
             self.mutation_prompts = [
-                "Refine the strategy of the selected solution to improve it.",  # small mutation
-                # "Generate a new algorithm that is different from the algorithms you have tried before.", #new random solution
+                # "Refine the strategy of the selected solution to improve it.",  # small mutation
+                # "Generate a new HIIT program that is different from the programs you have tried before.", #new random solution
+                "Generate a new HIIT program that explores a different style, intensity distribution, or exercise selection compared to previous programs."
+                # "Generate a complete different HIIT program with completely different style, intensity distribution, and exercise selection compared to previous programs."
             ]
         self.budget = budget
         self.n_parents = n_parents
@@ -173,7 +186,7 @@ Space: <configuration_space>"""
         self.worst_value = -np.Inf
         if minimization:
             self.worst_value = np.Inf
-        self.best_so_far = Solution(name="", code="")
+        self.best_so_far = Solution(name="", data={})
         self.best_so_far.set_scores(self.worst_value, "", "")
         self.experiment_name = experiment_name
 
@@ -187,15 +200,16 @@ Space: <configuration_space>"""
         if max_workers > self.n_offspring:
             max_workers = self.n_offspring
         self.max_workers = max_workers
+        self.choice_state=_CHOICE_STATE
 
     def logevent(self, event):
         self.textlog.info(event)
 
     def initialize_single(self):
         """
-        Initializes a single solution.
+        Initializes a single solution (HIIT program).
         """
-        new_individual = Solution(name="", code="", generation=self.generation)
+        new_individual = Solution(name="", data={}, generation=self.generation)
         session_messages = [
             {
                 "role": "user",
@@ -208,7 +222,31 @@ Space: <configuration_space>"""
         try:
             new_individual = self.llm.sample_solution(session_messages, HPO=self.HPO)
             new_individual.generation = self.generation
+
+            # Save the text to a .txt file
+            # hiit_text = new_individual.text
+            # filename = f"hiit_gen_{self.generation}_id_{random.randint(1000, 9999)}.txt"
+            # with open(filename, "w", encoding="utf-8") as f:
+            #     f.write(hiit_text)
+            # # Evaluate the program's fitness based on text
+            # new_individual = self.evaluate_fitness(new_individual)
+
+            # Convert LLM JSON string to dict
+            hiit_data = new_individual.data  # <--- convert JSON string to Python dict
+            hiit_data.update({
+                "generation": self.generation,
+                "id": random.randint(1000, 9999),
+                "name": new_individual.name,
+            })
+
+            # Save to JSON file
+            filename = f"hiit_gen_{hiit_data['generation']}_id_{hiit_data['id']}.json"
+            with open(filename, "w", encoding="utf-8") as f:
+                json.dump(hiit_data, f, indent=4, ensure_ascii=False)
+
+            # Evaluate fitness
             new_individual = self.evaluate_fitness(new_individual)
+
         except Exception as e:
             new_individual.set_scores(
                 self.worst_value,
@@ -245,6 +283,8 @@ Space: <configuration_space>"""
 
         self.generation += 1
         self.population = population  # Save the entire population
+        if not population:
+            raise RuntimeError("Failed to initialize population. No individuals were generated.")
         self.update_best()
 
     def evaluate_fitness(self, individual):
@@ -258,54 +298,84 @@ Space: <configuration_space>"""
         Returns:
             Solution: The updated solution with feedback, fitness and error information filled in.
         """
-        with contextlib.redirect_stdout(None):
-            updated_individual = self.f(individual, self.logger)
-
+        # with contextlib.redirect_stdout(None):
+        #     updated_individual = self.f(individual, self.logger)
+        updated_individual = self.f(individual, self.logger)
         return updated_individual
 
     def construct_prompt(self, individual):
         """
-        Constructs a new session prompt for the language model based on a selected individual.
-
-        Args:
-            individual (dict): The individual to mutate.
-
-        Returns:
-            list: A list of dictionaries simulating a conversation with the language model for the next evolutionary step.
+        Constructs a new session prompt for the language model based on a selected HIIT plan.
         """
         # Generate the current population summary
         population_summary = "\n".join([ind.get_summary() for ind in self.population])
-        solution = individual.code
+        # solution_text = individual.text
+        # Parse the previous HIIT solution (convert from JSON string to Python dict)
+        try:
+            if isinstance(individual.data, str):
+                hiit_data = json.loads(individual.data)  # si es string, intenta parsearlo como JSON
+            else:
+                hiit_data = individual.data              # si ya es dict/list, úsalo tal cual
+        except Exception:
+            # si no se puede parsear, mételo como texto crudo
+            hiit_data = {"raw_text": str(individual.data)}
+
         description = individual.description
         feedback = individual.feedback
-        if self.adaptive_mutation == True:
-            num_lines = len(solution.split("\n"))
-            prob = discrete_power_law_distribution(num_lines, 1.5)
-            new_mutation_prompt = f"""Refine the strategy of the selected solution to improve it. 
-Make sure you only change {(prob*100):.1f}% of the code, which means if the code has 100 lines, you can only change {prob*100} lines, and the rest of the lines should remain unchanged. 
-This input code has {num_lines} lines, so you can only change {max(1, int(prob*num_lines))} lines, the rest {num_lines-max(1, int(prob*num_lines))} lines should remain unchanged. 
-This changing rate {(prob*100):.1f}% is a mandatory requirement, you cannot change more or less than this rate.
-"""
+        last_feedback = individual.last_feedback
+
+        if self.adaptive_mutation:
+            # num_lines = len(solution_text.splitlines())
+            num_lines = len(individual.splitlines())
+            prob = discrete_power_law_distribution(num_lines, 1.5) # Follows the discrete power-law distribution to pick a probability of change.
+            lines_to_change = max (1, int(prob*num_lines)) # Ensures changing at least 1 line of the program.
+            new_mutation_prompt = (f"Improve this HIIT plan by changing about {lines_to_change} lines ({(prob*100):.1f}% of the content). Keep the rest unchanged")
             self.mutation_prompts = [new_mutation_prompt]
 
         mutation_operator = random.choice(self.mutation_prompts)
         individual.set_operator(mutation_operator)
 
+        # Prepare the JSON plan as a formatted string for the prompt
+        hiit_json_string = json.dumps(hiit_data, indent=4, ensure_ascii=False)
+
         final_prompt = f"""{self.task_prompt}
-The current population of algorithms already evaluated (name, description, score) is:
-{population_summary}
+The current HIIT program to improve is (in JSON format):
+{hiit_json_string}
 
-The selected solution to update is:
-{description}
-
-With code:
-{solution}
-
+With feedback:
 {feedback}
 
+With user feedback:
+{last_feedback}
+
 {mutation_operator}
+
 {self.output_format_prompt}
 """
+        # if getattr(individual, "last_feedback", None):
+        #     final_prompt += f"\n\nUser feedback from the last round: {individual.last_feedback}"
+        # elif hasattr(self, "choice_state") and self.choice_state.get("last_feedback"):
+        #     final_prompt += f"\n\nUser feedback from the last round: {self.choice_state['last_feedback']}"
+
+        # 🔍 System feedback (ya lo tienes en individual.feedback)
+        system_fb = getattr(individual, "feedback", None)
+
+        # 🔍 User feedback: primero intento en el objeto, luego fallback al estado global
+        user_fb = getattr(individual, "last_feedback", None)
+        if not user_fb and self.choice_state:
+            user_fb = self.choice_state.get("incumbent_feedback")
+
+        # Añadir ambos feedbacks al prompt
+        final_prompt += f"\n\nSystem feedback: {system_fb}"
+        if user_fb:
+            final_prompt += f"\n\nUser feedback from the last round: {user_fb}"
+            print("=== DEBUG construct_prompt ===")
+            print("User feedback inserted into final_prompt:", user_fb)
+            print("==============================")
+        else:
+            print("=== DEBUG construct_prompt ===")
+            print("No user feedback available (using None)")
+            print("==============================")
         session_messages = [
             {"role": "user", "content": self.role_prompt + final_prompt},
         ]
@@ -314,6 +384,7 @@ With code:
             session_messages = [
                 {"role": "user", "content": self.role_prompt + self.task_prompt},
             ]
+
         # Logic to construct the new prompt based on current evolutionary state.
         return session_messages
 
@@ -363,15 +434,55 @@ With code:
 
     def evolve_solution(self, individual):
         """
-        Evolves a single solution by constructing a new prompt,
+        Evolves a single HIIT solution by constructing a new prompt,
         querying the LLM, and evaluating the fitness.
         """
-        new_prompt = self.construct_prompt(individual)
+        # new_prompt = self.construct_prompt(individual)
+        # # 🔥 Add user feedback if available
+        # if getattr(individual, "last_feedback", None):
+        #     print("The feedback from the user is: " + individual.last_feedback) #DEBUG
+        #     new_prompt += f"\n\nUser feedback from the last round: {individual.last_feedback}"
+        # else:
+        #     print("No feedback passed for this individual.")
+
+        session_messages = self.construct_prompt(individual)
+
+        # 🔒 Normalización defensiva: aceptar str, dict o lista mixta
+        if isinstance(session_messages, str):
+            session_messages = [{"role": "user", "content": session_messages}]
+        elif isinstance(session_messages, dict):
+            session_messages = [session_messages]
+        elif isinstance(session_messages, list):
+            norm = []
+            for m in session_messages:
+                if isinstance(m, dict) and "content" in m:
+                    norm.append(m)
+                else:
+                    # si por error te llega un string u otro tipo dentro de la lista
+                    norm.append({"role": "user", "content": str(m)})
+            session_messages = norm
+        else:
+        # Último resort
+            session_messages = [{"role": "user", "content": str(session_messages)}]
+
         evolved_individual = individual.copy()
 
+        # try:
+        #     # Evolve a new HIIT program with LLM
+        #     evolved_individual = self.llm.sample_solution(
+        #         new_prompt, evolved_individual.parent_ids, HPO=self.HPO
+        #     )
+            
+        #     evolved_individual.generation = self.generation
+        #     # Evaluate the new HIIT program
+        #     evolved_individual = self.evaluate_fitness(evolved_individual)
+
         try:
+            evolved_individual = individual.copy()
             evolved_individual = self.llm.sample_solution(
-                new_prompt, evolved_individual.parent_ids, HPO=self.HPO
+                session_messages,  # <- PASA LOS MENSAJES NORMALIZADOS
+                evolved_individual.parent_ids,
+                HPO=self.HPO
             )
             evolved_individual.generation = self.generation
             evolved_individual = self.evaluate_fitness(evolved_individual)
@@ -415,6 +526,7 @@ With code:
 
             new_population = []
             try:
+                # Create offspring in parallel 
                 timeout = self.eval_timeout
                 new_population_gen = Parallel(
                     n_jobs=self.max_workers,

@@ -12,7 +12,9 @@ class Solution:
 
     def __init__(
         self,
-        code="",
+        # code="",
+        # text="",
+        data=None,
         name="",
         description="",
         configspace=None,
@@ -33,7 +35,9 @@ class Solution:
             operator (str): Optional identifier of the LLM operation that created this individual.
         """
         self.id = str(uuid.uuid4())  # Unique ID for this individual
-        self.code = code
+        # self.code = code
+        # self.text = text
+        self.data = data if data is not None else {}
         self.name = name
         self.description = description
         self.configspace = configspace
@@ -44,6 +48,7 @@ class Solution:
         self.parent_ids = parent_ids
         self.metadata = {}  # Dictionary to store additional metadata
         self.operator = operator
+        self.last_feedback = None
 
     def set_operator(self, operator):
         """
@@ -95,7 +100,9 @@ class Solution:
             Individual: A new instance of Individual with the same attributes but a different ID.
         """
         new_solution = Solution(
-            code=self.code,
+            # code=self.code,
+            # text = self.text,
+            data=json.loads(json.dumps(self.data)),
             name=self.name,
             description=self.description,
             configspace=self.configspace,
@@ -104,6 +111,10 @@ class Solution:
             operator=self.operator,
         )
         new_solution.metadata = self.metadata.copy()  # Copy the metadata as well
+        new_solution.fitness = self.fitness
+        new_solution.feedback = self.feedback
+        new_solution.error = self.error
+        new_solution.last_feedback = self.last_feedback
         return new_solution
 
     def to_dict(self):
@@ -123,7 +134,9 @@ class Solution:
             "fitness": self.fitness,
             "name": self.name,
             "description": self.description,
-            "code": self.code,
+            # "code": self.code,
+            # "text": self.text,
+            "data": self.data,
             "configspace": cs,
             "generation": self.generation,
             "feedback": self.feedback,
@@ -131,6 +144,7 @@ class Solution:
             "parent_ids": self.parent_ids,
             "operator": self.operator,
             "metadata": self.metadata,
+            "last_feedback": self.last_feedback,
         }
 
     def to_json(self):

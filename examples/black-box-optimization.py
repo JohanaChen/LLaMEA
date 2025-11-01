@@ -10,6 +10,7 @@ import re
 import numpy as np
 from ioh import get_problem, logger
 
+
 from llamea import Gemini_LLM, LLaMEA
 from misc import OverBudgetException, aoc_logger, correct_aoc
 
@@ -86,6 +87,7 @@ if __name__ == "__main__":
             experiment_name=experiment_name,
             elitism=True,
             HPO=False,
-            budget=100,
+            # budget=100,
+            budget=5,
         )
         print(es.run())

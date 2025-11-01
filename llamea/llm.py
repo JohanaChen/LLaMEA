@@ -6,6 +6,7 @@ import logging
 import pickle
 import re
 import time
+import json
 from abc import ABC, abstractmethod
 
 import google.generativeai as genai
@@ -23,7 +24,8 @@ class LLM(ABC):
         api_key,
         model="",
         base_url="",
-        code_pattern=None,
+        # text_pattern=None,
+        data_pattern=None,
         name_pattern=None,
         desc_pattern=None,
         cs_pattern=None,
@@ -47,8 +49,8 @@ class LLM(ABC):
         self.model = model
         self.logger = logger
         self.log = self.logger != None
-        self.code_pattern = (
-            code_pattern if code_pattern != None else r"```(?:python)?\n(.*?)\n```"
+        self.data_pattern = (
+            data_pattern if data_pattern != None else r"```(?:python)?\n(.*?)\n```"
         )
         self.name_pattern = (
             name_pattern
@@ -114,13 +116,34 @@ class LLM(ABC):
         if self.log:
             self.logger.log_conversation(self.model, message)
 
-        code = self.extract_algorithm_code(message)
-        name = re.findall(
-            "class\\s*(\\w*)(?:\\(\\w*\\))?\\:",
-            code,
-            re.IGNORECASE,
-        )[0]
-        desc = self.extract_algorithm_description(message)
+        # text = self.extract_algorithm_text(message)
+        # name = re.findall(
+        #     "class\\s*(\\w*)(?:\\(\\w*\\))?\\:",
+        #     code,
+        #     re.IGNORECASE,
+        # )[0]
+
+        # matches = re.findall(
+        #     r"class\s*(\w*)(?:\(\w*\))?\:",
+        #     text,
+        #     re.IGNORECASE,
+        # )
+        # if matches:
+        #     name = matches[0]
+        # else:
+        #     # Fallback name for non-class code (like HIIT programs)
+        #     name = "HIITProgram"
+        # desc = self.extract_algorithm_description(message)
+
+        # Extract structured data instead of raw text
+        data = self.extract_algorithm_data(message)  # <-- new method to handle JSON
+
+        # Extract name (if present in data) or fallback
+        name = data.get("name", "HIITProgram")
+
+        # Extract description (if present) or fallback
+        desc = data.get("description", self.extract_algorithm_description(message))
+
         cs = None
         if HPO:
             cs = self.extract_configspace(message)
@@ -128,67 +151,116 @@ class LLM(ABC):
             name=name,
             description=desc,
             configspace=cs,
-            code=code,
+            data=data,
             parent_ids=parent_ids,
         )
 
         return new_individual
 
-    def extract_configspace(self, message):
+    # def extract_configspace(self, message):
+    #     """
+    #     Extracts the configuration space definition in json from a given message string using regular expressions.
+
+    #     Args:
+    #         message (str): The message string containing the algorithm code.
+
+    #     Returns:
+    #         ConfigSpace: Extracted configuration space object.
+    #     """
+    #     pattern = r"space\s*:\s*\n*```\n*(?:python)?\n(.*?)\n```"
+    #     c = None
+    #     for m in re.finditer(pattern, message, re.DOTALL | re.IGNORECASE):
+    #         try:
+    #             c = ConfigurationSpace(eval(m.group(1)))
+    #         except Exception as e:
+    #             pass
+    #     return c
+    
+    def extract_configspace(self, data):
         """
-        Extracts the configuration space definition in json from a given message string using regular expressions.
+        Extracts the configuration space from the data dict.
 
         Args:
-            message (str): The message string containing the algorithm code.
+            data (dict): The data dict containing the algorithm or HIIT program.
 
         Returns:
-            ConfigSpace: Extracted configuration space object.
+            ConfigSpace.ConfigurationSpace | None: Extracted configuration space object if present.
         """
-        pattern = r"space\s*:\s*\n*```\n*(?:python)?\n(.*?)\n```"
-        c = None
-        for m in re.finditer(pattern, message, re.DOTALL | re.IGNORECASE):
-            try:
-                c = ConfigurationSpace(eval(m.group(1)))
-            except Exception as e:
-                pass
-        return c
+        cs = None
+        try:
+            if "configspace" in data:
+                cs = ConfigurationSpace(data["configspace"])
+        except Exception:
+            pass
+        return cs
 
-    def extract_algorithm_code(self, message):
+
+    # def extract_algorithm_text(self, message):
+    #     """
+    #     Extracts the HIIT plan text directly from the message.
+    #     No code blocks or parsing logic — we assume the entire message is valid output.
+    #     """
+    #     pattern = r"```(?:text)?\n(.*?)\n```"
+    #     match = re.search(pattern, message, re.DOTALL | re.IGNORECASE)
+    #     if match:
+    #         return match.group(1).strip()
+    #     return message.strip()
+
+    def extract_algorithm_data(self, message):
         """
-        Extracts algorithm code from a given message string using regular expressions.
+        Extracts structured HIIT data (JSON) from the model's response.
 
         Args:
-            message (str): The message string containing the algorithm code.
+            message (str): The raw response from the LLM.
 
         Returns:
-            str: Extracted algorithm code.
+            dict: Parsed JSON data for the HIIT plan.
 
         Raises:
-            NoCodeException: If no code block is found within the message.
+            ValueError: If the message is not valid JSON.
         """
-        pattern = r"```(?:python)?\n(.*?)\n```"
-        match = re.search(pattern, message, re.DOTALL | re.IGNORECASE)
-        if match:
-            return match.group(1)
-        else:
-            raise NoCodeException
+        try:
+            # If the message already contains valid JSON
+            return json.loads(message)
+        except json.JSONDecodeError:
+            # Try to extract JSON from inside a code block
+            pattern = r"```(?:json)?\n(.*?)\n```"
+            match = re.search(pattern, message, re.DOTALL | re.IGNORECASE)
+            if match:
+                try:
+                    return json.loads(match.group(1).strip())
+                except json.JSONDecodeError:
+                    pass
 
-    def extract_algorithm_description(self, message):
+            # As a fallback, return an empty dict (or raise an error if you want strict behavior)
+            raise ValueError("Failed to extract valid JSON HIIT data from LLM response.")
+
+
+    # def extract_algorithm_description(self, message):
+    #     """
+    #     Returns a simple one-line summary based on the first non-empty line
+    #     of the HIIT text plan.
+    #     """
+    #     lines = message.strip().splitlines()
+    #     for line in lines:
+    #         if line.strip():  # Skip empty lines
+    #             return f"HIIT plan starting with: {line.strip()}"
+    #     return "HIIT plan (no description available)"
+
+    def extract_algorithm_description(self, data):
         """
-        Extracts algorithm description from a given message string using regular expressions.
-
-        Args:
-            message (str): The message string containing the algorithm name and code.
-
-        Returns:
-            str: Extracted algorithm name or empty string.
+        Generates a one-line summary from HIIT program data.
         """
-        pattern = r"#\s*Description\s*:\s*(.*)"
-        match = re.search(pattern, message, re.IGNORECASE)
-        if match:
-            return match.group(1)
-        else:
-            return ""
+        if isinstance(data, dict) and "exercises" in data:
+            first_exercise = data["exercises"][0]["name"] if data["exercises"] else "Unnamed exercise"
+            return f"HIIT plan starting with: {first_exercise}"
+        elif isinstance(data, str):  # Fallback if still dealing with raw text
+            lines = data.strip().splitlines()
+            for line in lines:
+                if line.strip():
+                    return f"HIIT plan starting with: {line.strip()}"
+        return "HIIT plan (no description available)"
+
 
 
 class OpenAI_LLM(LLM):

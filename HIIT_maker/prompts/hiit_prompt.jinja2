@@ -1,0 +1,42 @@
+Design a high-intensity interval training (HIIT) program as valid JSON.
+The program should be 10-40 minutes long in total.
+
+Each exercise of the program must include:
+- The name of the exercise (string)
+- The duration of the exercise (in seconds, integer)
+- The rest period after the exercise (in seconds, integer)
+Include warm-up and cool-down phases and avoid repeating the same exercise too often.
+The core training should include a balance of cardio, strength, and flexibility exercises.
+
+Ensure variety in terms of range of:
+- Types of exercises # give some specific types of exercices as example (weightlifting, plyometrics, bodyweight, etc.)
+- Training structures (e.g. EMOM, AMRAP, E2MOM, Death-by, Tabata, etc.)
+- Number of repetitions
+- Load and intensity (implicitly controlled via duration and rest).
+# Variation in time: short exercices many times or less but longer exercices 
+Each generated program doesn't have to contain the same set of exercises, different structures of programs are allowed, such as linear sequence, repeated circuits, or block cycles.
+Make the program suitable for intermediate-level individuals with moderate fitness.
+Annotate exercises with a tag like `(type: cardio)` or `(intensity: medium)` to indicate the nature and difficulty of the exercise.
+
+The output should be pure JSON and easy-to-read list of exercises, for example:
+
+```json
+{
+  "warm_up": [
+    { "name": "Jumping Jacks", "duration": 30, "rest": 10, "type": "cardio" },
+    { "name": "Arm Circles", "duration": 20, "rest": 10, "type": "mobility" }
+  ],
+  "main_set": {
+    "type": "EMOM",
+    "rounds": 5,
+    "exercises": [
+      { "name": "Burpees", "duration": 40, "rest": 20, "type": "cardio", "intensity": "high" },
+      { "name": "Push-ups", "duration": 30, "rest": 30, "type": "strength", "intensity": "medium" },
+      { "name": "Jump Squats", "duration": 30, "rest": 20, "type": "strength/cardio" }
+    ]
+  },
+  "cool_down": [
+    { "name": "Forward Fold", "duration": 30, "rest": 10, "type": "flexibility" },
+    { "name": "Child's Pose", "duration": 30, "rest": 10, "type": "recovery" }
+  ]
+}
