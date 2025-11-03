@@ -1,42 +1,43 @@
-Design a high-intensity interval training (HIIT) program as valid JSON.
-The program should be 10-40 minutes long in total.
+Design a **high-intensity interval training (HIIT)** program in valid **JSON** format.
 
-Each exercise of the program must include:
-- The name of the exercise (string)
-- The duration of the exercise (in seconds, integer)
-- The rest period after the exercise (in seconds, integer)
-Include warm-up and cool-down phases and avoid repeating the same exercise too often.
-The core training should include a balance of cardio, strength, and flexibility exercises.
+The program must:
+- Last between **10 and 30 minutes** in total.
+- Be suitable for an **intermediate** fitness level.
+- Include three sections: `"warm_up"`, `"main_set"`, and `"cool_down"`.
+- Vary in types of exercises, training structures, durations, rest periods, and intensities.
+- Balance **cardio**, **strength**, and **mobility/flexibility** movements.
 
-Ensure variety in terms of range of:
-- Types of exercises # give some specific types of exercices as example (weightlifting, plyometrics, bodyweight, etc.)
-- Training structures (e.g. EMOM, AMRAP, E2MOM, Death-by, Tabata, etc.)
-- Number of repetitions
-- Load and intensity (implicitly controlled via duration and rest).
-# Variation in time: short exercices many times or less but longer exercices 
-Each generated program doesn't have to contain the same set of exercises, different structures of programs are allowed, such as linear sequence, repeated circuits, or block cycles.
-Make the program suitable for intermediate-level individuals with moderate fitness.
-Annotate exercises with a tag like `(type: cardio)` or `(intensity: medium)` to indicate the nature and difficulty of the exercise.
+Each exercise object must have:
+- `"name"` (string)
+- `"duration"` (seconds, integer)
+- `"rest"` (seconds, integer)
+- `"type"` (e.g. "cardio", "strength", "core", "flexibility")
+- `"intensity"` (low, medium, or high)
 
-The output should be pure JSON and easy-to-read list of exercises, for example:
+The `"main_set"` can include one optional `"structure"` field (e.g. "AMRAP", "EMOM", "Tabata"), but avoid nested blocks or overly complex structures.
 
-```json
+Output **only JSON**, no code fences, no explanations.
+
+Limit total JSON length to under 1500 characters.
+
+Example:
+
 {
   "warm_up": [
-    { "name": "Jumping Jacks", "duration": 30, "rest": 10, "type": "cardio" },
-    { "name": "Arm Circles", "duration": 20, "rest": 10, "type": "mobility" }
+    { "name": "Jumping Jacks", "duration": 30, "rest": 10, "type": "cardio", "intensity": "low" },
+    { "name": "Arm Circles", "duration": 20, "rest": 10, "type": "mobility", "intensity": "low" }
   ],
   "main_set": {
-    "type": "EMOM",
-    "rounds": 5,
+    "structure": "EMOM",
+    "rounds": 4,
     "exercises": [
       { "name": "Burpees", "duration": 40, "rest": 20, "type": "cardio", "intensity": "high" },
-      { "name": "Push-ups", "duration": 30, "rest": 30, "type": "strength", "intensity": "medium" },
-      { "name": "Jump Squats", "duration": 30, "rest": 20, "type": "strength/cardio" }
+      { "name": "Push-ups", "duration": 30, "rest": 20, "type": "strength", "intensity": "medium" },
+      { "name": "Jump Squats", "duration": 30, "rest": 15, "type": "strength/cardio", "intensity": "high" }
     ]
   },
   "cool_down": [
-    { "name": "Forward Fold", "duration": 30, "rest": 10, "type": "flexibility" },
-    { "name": "Child's Pose", "duration": 30, "rest": 10, "type": "recovery" }
+    { "name": "Forward Fold", "duration": 30, "rest": 10, "type": "flexibility", "intensity": "low" },
+    { "name": "Child's Pose", "duration": 30, "rest": 10, "type": "recovery", "intensity": "low" }
   ]
 }

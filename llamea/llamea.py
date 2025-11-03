@@ -369,13 +369,7 @@ With user feedback:
         final_prompt += f"\n\nSystem feedback: {system_fb}"
         if user_fb:
             final_prompt += f"\n\nUser feedback from the last round: {user_fb}"
-            print("=== DEBUG construct_prompt ===")
-            print("User feedback inserted into final_prompt:", user_fb)
-            print("==============================")
-        else:
-            print("=== DEBUG construct_prompt ===")
-            print("No user feedback available (using None)")
-            print("==============================")
+
         session_messages = [
             {"role": "user", "content": self.role_prompt + final_prompt},
         ]
@@ -555,4 +549,23 @@ With user feedback:
                 f"Generation {self.generation}, best so far: {self.best_so_far.fitness}"
             )
 
-        return self.best_so_far
+        # --- Package useful info before returning ---
+        best = self.best_so_far
+        best_data = {
+            "id": best.id,
+            "description": best.description,
+            "fitness": best.fitness,
+            "generation": best.generation,
+            "metadata": best.metadata,
+        }
+        # If this individual already contains its workout sections (warm_up, main_set, cool_down)
+        # inside .data, merge them in:
+        if isinstance(best.data, dict):
+            # Copy only workout-related sections if they exist
+            for section in ["warm_up", "main_set", "cool_down"]:
+                if section in best.data:
+                    best_data[section] = best.data[section]
+
+        best.data = best_data
+
+        return best

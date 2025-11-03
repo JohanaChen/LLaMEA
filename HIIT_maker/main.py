@@ -4,12 +4,14 @@ import argparse
 from datetime import datetime
 from jinja2 import Template
 from dotenv import load_dotenv
+import google.generativeai as genai
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from HIIT_maker.utils.io_utils import save_json_result
 from llamea import LLaMEA, Gemini_LLM
 from evaluation.ABtest import ABtest
+from evaluation.LLMpredict import LLMpredict
 from utils.state_utils import reset_choice_state
 
 def load_prompt(path):
@@ -26,7 +28,7 @@ if __name__ == "__main__":
         "--evaluator",
         type=str,
         default="ABtest",
-        choices=["ABtest", "OtherEvaluator"],  # list all available evaluators
+        choices=["ABtest", "LLMpredict", "LLMchoose"],  # list all available evaluators
         help="Which evaluator to use (default: ABtest)"
     )
     args = parser.parse_args()
@@ -34,6 +36,11 @@ if __name__ == "__main__":
     # LLM setup
     load_dotenv()
     api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not found in .env file")
+    
+    # Configure the Gemini API
+    genai.configure(api_key=api_key)
     llm = Gemini_LLM(api_key, "gemini-flash-latest")
 
     # Load prompt
@@ -42,10 +49,10 @@ if __name__ == "__main__":
     # Choose evaluator
     if args.evaluator == "ABtest":
         evaluator = ABtest(logger=log)
-    elif args.evaluator == "LLMchoose":
-        evaluator = LLMchoose(logger=log)
+    # elif args.evaluator == "LLMchoose":
+    #     evaluator = LLMchoose(logger=log)
     elif args.evaluator == "LLMpredict":
-        evaluator = LLMpredict(logger=log)
+        evaluator = LLMpredict(llm, logger=log)
     else:
         raise ValueError(f"Unknown evaluator: {args.evaluator}")
 
