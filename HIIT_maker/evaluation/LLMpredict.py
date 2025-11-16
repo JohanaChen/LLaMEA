@@ -9,7 +9,7 @@ from typing import Dict, Any, List
 from utils.json_tools import _coerce_json
 from utils.logging_utils import _log
 from utils.state_utils import reset_choice_state
-from utils.state import _CHOICE_STATE
+from utils.state import _CHOICE_STATE as S
 from HIIT_maker.utils.io_utils import save_json_result
 from HIIT_maker.utils.llm_utils import _llm_complete
 from HIIT_maker.utils.schema_utils import HIIT_RESPONSE_SCHEMA
@@ -23,7 +23,7 @@ class LLMpredict:
     
     def make_prompt(self, program_text: str) -> str:
          return (
-            "You are a sports physiologist. Predict an average healthy adult's HEART RATE (bpm) "
+            "You are a sports physiologist. Predict an average healthy women's (around 20-30 years) HEART RATE (bpm) "
             "and POWER OUTPUT (watts) over the given HIIT workout.\n\n"
             "Guidelines:\n"
             "- HR rises during work, falls during rest (~20-60s lag). Range: 60-200 bpm.\n"
@@ -50,20 +50,18 @@ class LLMpredict:
             t += dur + rest
         return f"TOTAL_DURATION_SEC={t}\n" + "\n".join(lines)
 
-    def predict_hr_power(self, llm_eval, prompt: str, max_retries: int = 1):
+    def predict_hr_power(self, llm_eval, prompt: str, max_retries: int = 1, logger=None):
         """Predict both heart rate and power output for the HIIT program."""
         raw = _llm_complete(llm_eval, prompt, temperature=0.2, max_tokens=9000)  # bump tokens a bit
         try:
             s, e = raw.find("{"), raw.rfind("}")
             candidate = raw[s:e+1] if s != -1 and e != -1 else raw
             data = _coerce_json(candidate)
-
             required_keys = ["summary", "per_interval_hr", "per_interval_power"]
             if not all(k in data for k in required_keys):
                 raise ValueError("Missing required keys in predicted_hr_power JSON")
             if not isinstance(data, dict):
                 raise ValueError(f"Evaluation LLM did not return a valid JSON object.\nSnippet:\n{raw[:500]}")
-
             return data
         
         except Exception:
@@ -80,12 +78,10 @@ class LLMpredict:
         s, e = raw2.find("{"), raw2.rfind("}")
         candidate = raw2[s:e+1] if s != -1 and e != -1 else raw2
         data = _coerce_json(candidate)
-
         required_keys = ["summary", "per_interval_hr", "per_interval_power"]
         
         if not isinstance(data, dict) or not all(k in data for k in required_keys):
             raise ValueError(f"Evaluation LLM did not return valid JSON after repair.\nSnippet:\n{raw2[:800]}")
-
         return data
     
     def fitness(self, pred: Dict[str, Any], hr_max: int = 190, weights: Dict[str, float] = None) -> float:
@@ -247,7 +243,18 @@ class LLMpredict:
         return clamp(score)
 
 
+    # def _infer_hr_max(self, pred, default=200):
+    #     txt = (pred.get("assumptions") or "") + " " + str(pred.get("summary", {}))
+    #     m = re.search(r'(\d{2,3})\s*(?:bpm|HRmax)', txt, flags=re.I)
+    #     if m:
+    #         val = int(m.group(1))
+    #         if 150 <= val <= 220:
+    #             return val
+    #     return default
+    
     def _infer_hr_max(self, pred, default=200):
+        if not isinstance(pred, dict):
+            return default
         txt = (pred.get("assumptions") or "") + " " + str(pred.get("summary", {}))
         m = re.search(r'(\d{2,3})\s*(?:bpm|HRmax)', txt, flags=re.I)
         if m:
@@ -255,14 +262,15 @@ class LLMpredict:
             if 150 <= val <= 220:
                 return val
         return default
-    
+
+
     def evaluate_HIIT(self, solution, logger=None, llm_eval=None):
         if llm_eval is None:
             llm_eval = self.llm_eval
 
         feedback = ""
         program = []
-        # llm_eval = ctx.get("llm_eval") or ctx.get("llm")
+
         try:
             # Parse JSON input
             data = _coerce_json(solution.data)
@@ -295,7 +303,6 @@ class LLMpredict:
             predicted_power = predictions["summary"].get("avg_power", None)
 
             hr_max = self._infer_hr_max(predictions, default=200)
-
 
             total_work = sum(int(ex.get("duration", 0)) for ex in program)
             total_rest = sum(int(ex.get("rest", 0)) for ex in program)
@@ -337,5 +344,37 @@ class LLMpredict:
         _log(logger, feedback)
 
         solution.set_scores(fitness=fitness_score, feedback=feedback)
+
+        # Update glocal choice
+        try :
+            if S["incumbent_id"] is None or fitness_score > S["fitness_score"]:
+                S["incumbent_id"] = getattr(solution, "id", "unkown")
+                S["incumbent_json"] = getattr(solution, "data", {})
+                S["incumbent_render"] = getattr(solution, "description", "")
+                S["fitness_score"] = fitness_score
+        except Exception as e:
+            if logger:
+                logger.warning(f"[Hybrid] Could not update incumbent after LLMpredict: {e}")
+
         return solution
+
+    def get_top_candidates(self, population, n=2):
+        """Return the top-n individuals from the current population."""
+        if not population:
+            raise ValueError("Empty population passed to get_top_candidates().")
+        sorted_pop = sorted(
+            population,
+            key=lambda ind: getattr(ind, "fitness", float("-inf")),
+            reverse=True
+        )
+        return sorted_pop[:n]
+    
+    def integrate_user_feedback(self, feedback):
+        """Optionally store or use user feedback."""
+        if not feedback:
+            return
+        if self.logger:
+            self.logger.info(f"Integrating user feedback: {feedback}")
+        self.last_feedback = feedback
+
     

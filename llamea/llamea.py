@@ -20,6 +20,7 @@ from .solution import Solution
 from .utils import NoCodeException, discrete_power_law_distribution, handle_timeout
 
 from HIIT_maker.utils.state import _CHOICE_STATE
+from HIIT_maker.evaluation.Hybrid import Hybrid
 
 
 # TODOs:

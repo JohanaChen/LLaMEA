@@ -2,10 +2,11 @@ import numpy as np
 import random
 import json
 import os
+import sys
 from utils.json_tools import _coerce_json
 from utils.logging_utils import _log
 from utils.state_utils import reset_choice_state
-from utils.state import _CHOICE_STATE
+import utils.state as state 
 from HIIT_maker.utils.io_utils import save_json_result
 
 class ABtest:
@@ -103,7 +104,7 @@ class ABtest:
         rid = self._solution_id(solution)
         rendered = self._render_program_markdown(data) # Create readable string for the terminal printout
 
-        S = _CHOICE_STATE # Define the global choice-state
+        S = state._CHOICE_STATE 
 
         # First ever program becomes the incumbent (A)
         if S["incumbent_id"] is None:
@@ -122,9 +123,14 @@ class ABtest:
             solution.set_scores(fitness=fitness, feedback=feedback)
             return solution
 
+        # Re-render incumbent A from its saved JSON
+        try:
+            incumbent_render = self._render_program_markdown(S["incumbent_json"])
+        except Exception:
+            incumbent_render = json.dumps(S["incumbent_json"], indent=2)
         # A vs B
         print("\n-------------------------------------------")
-        print("Incumbent [A]\n" + S["incumbent_render"])
+        print("Incumbent [A]\n" + incumbent_render)
         print("\nCandidate [B]\n" + rendered)
         print("\nType A / B / T (tie → random) or STOP (to finish): ")
 
@@ -140,7 +146,8 @@ class ABtest:
             feedback = "User chose to stop — saved incumbent as final program."
             fitness = S["fitness_level"]
             solution.set_scores(fitness=fitness, feedback=feedback)
-            raise KeyboardInterrupt
+            _log(logger, feedback)
+            sys.exit(0)
 
         if choice == "T":
             choice = random.choice(["A", "B"])

@@ -12,6 +12,8 @@ from HIIT_maker.utils.io_utils import save_json_result
 from llamea import LLaMEA, Gemini_LLM
 from evaluation.ABtest import ABtest
 from evaluation.LLMpredict import LLMpredict
+# from evaluation.LLMchoose import LLMchoose
+from evaluation.Hybrid import Hybrid
 from utils.state_utils import reset_choice_state
 
 def load_prompt(path):
@@ -28,7 +30,7 @@ if __name__ == "__main__":
         "--evaluator",
         type=str,
         default="ABtest",
-        choices=["ABtest", "LLMpredict", "LLMchoose"],  # list all available evaluators
+        choices=["ABtest", "LLMpredict", "LLMchoose", "Hybrid"],  # list all available evaluators
         help="Which evaluator to use (default: ABtest)"
     )
     args = parser.parse_args()
@@ -49,10 +51,12 @@ if __name__ == "__main__":
     # Choose evaluator
     if args.evaluator == "ABtest":
         evaluator = ABtest(logger=log)
-    # elif args.evaluator == "LLMchoose":
-    #     evaluator = LLMchoose(logger=log)
     elif args.evaluator == "LLMpredict":
         evaluator = LLMpredict(llm, logger=log)
+    # elif args.evaluator == "LLMchoose":
+    #     evaluator = LLMchoose(logger=log)
+    elif args.evaluator == "Hybrid":
+        evaluator = Hybrid(llm, llm_eval=llm, logger=log)
     else:
         raise ValueError(f"Unknown evaluator: {args.evaluator}")
 
@@ -68,6 +72,7 @@ if __name__ == "__main__":
         elitism=True,
         HPO=False,
         budget=10,
+        max_workers=1,
     )
     result = es.run()
     if hasattr(result, "data"):
