@@ -1,0 +1,86 @@
+{
+    "warm_up": [
+        {
+            "name": "Jumping Jacks",
+            "duration": 45,
+            "rest": 15,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Dynamic Arm Circles",
+            "duration": 40,
+            "rest": 10,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "High Knees (Light)",
+            "duration": 45,
+            "rest": 15,
+            "type": "cardio",
+            "intensity": "medium"
+        }
+    ],
+    "main_set": {
+        "structure": "Circuit Repeat",
+        "rounds": 3,
+        "break_between_rounds": 60,
+        "exercises": [
+            {
+                "name": "Burpee (Chest to Floor)",
+                "duration": 60,
+                "rest": 15,
+                "type": "plyometric",
+                "intensity": "high"
+            },
+            {
+                "name": "Kettlebell Swing",
+                "duration": 45,
+                "rest": 15,
+                "type": "strength",
+                "intensity": "high"
+            },
+            {
+                "name": "Plank Jacks",
+                "duration": 30,
+                "rest": 10,
+                "type": "core",
+                "intensity": "medium"
+            },
+            {
+                "name": "Split Lunge Jumps",
+                "duration": 45,
+                "rest": 15,
+                "type": "plyometric",
+                "intensity": "high"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Quad Stretch (30s/leg)",
+            "duration": 60,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Supine Spinal Twist",
+            "duration": 45,
+            "rest": 15,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Child's Pose",
+            "duration": 60,
+            "rest": 0,
+            "type": "recovery",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 4775,
+    "name": "HIITProgram"
+}

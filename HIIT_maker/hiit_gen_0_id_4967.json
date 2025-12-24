@@ -1,0 +1,78 @@
+{
+    "warm_up": [
+        {
+            "name": "High Knees (Light)",
+            "duration": 45,
+            "rest": 15,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Dynamic Inchworm",
+            "duration": 30,
+            "rest": 10,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "Reverse Lunges (Bodyweight)",
+            "duration": 40,
+            "rest": 10,
+            "type": "strength",
+            "intensity": "medium"
+        }
+    ],
+    "main_set": {
+        "structure": "Circuit Repeats",
+        "rounds": 3,
+        "exercises": [
+            {
+                "name": "Dumbbell Thrusters",
+                "duration": 40,
+                "rest": 20,
+                "type": "strength",
+                "intensity": "high"
+            },
+            {
+                "name": "Lateral Bound Jumps",
+                "duration": 45,
+                "rest": 15,
+                "type": "plyometric/cardio",
+                "intensity": "high"
+            },
+            {
+                "name": "Hollow Body Holds",
+                "duration": 30,
+                "rest": 30,
+                "type": "core",
+                "intensity": "medium"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Quad Stretch (30s/side)",
+            "duration": 60,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Pigeon Pose (30s/side)",
+            "duration": 60,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Seated Forward Fold",
+            "duration": 45,
+            "rest": 0,
+            "type": "recovery",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 4967,
+    "name": "HIITProgram"
+}

@@ -7,4 +7,7 @@ _CHOICE_STATE = {
     "printed_help": False,
     "last_feedback": None,
     "incumbent_feedback": None,
+    "feedback_memory": [],
 }
+
+MEMORY_SPAN = 5  # number of recent feedbacks to keep

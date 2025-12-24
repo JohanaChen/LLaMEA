@@ -1,0 +1,85 @@
+{
+    "warm_up": [
+        {
+            "name": "Jog in Place",
+            "duration": 45,
+            "rest": 15,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Torso Twists",
+            "duration": 45,
+            "rest": 15,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "Glute Bridges",
+            "duration": 30,
+            "rest": 15,
+            "type": "strength",
+            "intensity": "low"
+        },
+        {
+            "name": "Arm Circles",
+            "duration": 30,
+            "rest": 10,
+            "type": "mobility",
+            "intensity": "low"
+        }
+    ],
+    "main_set": {
+        "structure": "Interval Circuit",
+        "rounds": 4,
+        "exercises": [
+            {
+                "name": "Kettlebell Swings",
+                "duration": 40,
+                "rest": 20,
+                "type": "weighted/cardio",
+                "intensity": "high"
+            },
+            {
+                "name": "Split Lunge Jumps",
+                "duration": 30,
+                "rest": 15,
+                "type": "plyometric",
+                "intensity": "high"
+            },
+            {
+                "name": "Forearm Plank",
+                "duration": 45,
+                "rest": 30,
+                "type": "core",
+                "intensity": "medium"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Standing Quad Stretch",
+            "duration": 45,
+            "rest": 15,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Seated Hamstring Stretch",
+            "duration": 45,
+            "rest": 15,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Reclined Spinal Twist",
+            "duration": 60,
+            "rest": 0,
+            "type": "recovery",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 4162,
+    "name": "HIITProgram"
+}

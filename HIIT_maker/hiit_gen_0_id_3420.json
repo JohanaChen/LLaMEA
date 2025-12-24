@@ -1,0 +1,92 @@
+{
+    "warm_up": [
+        {
+            "name": "High Knees (on spot)",
+            "duration": 30,
+            "rest": 10,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Torso Twists",
+            "duration": 20,
+            "rest": 10,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "Bodyweight Squats",
+            "duration": 30,
+            "rest": 10,
+            "type": "strength",
+            "intensity": "medium"
+        },
+        {
+            "name": "Inchworm Walkout",
+            "duration": 40,
+            "rest": 0,
+            "type": "mobility",
+            "intensity": "medium"
+        }
+    ],
+    "main_set": {
+        "structure": "Circuit Training",
+        "rounds": 4,
+        "exercises": [
+            {
+                "name": "Jump Squats (Plyo)",
+                "duration": 40,
+                "rest": 20,
+                "type": "plyometric/cardio",
+                "intensity": "high"
+            },
+            {
+                "name": "Dumbbell Push Press",
+                "duration": 30,
+                "rest": 15,
+                "type": "strength",
+                "intensity": "medium"
+            },
+            {
+                "name": "Russian Twist",
+                "duration": 45,
+                "rest": 15,
+                "type": "core",
+                "intensity": "medium"
+            },
+            {
+                "name": "Lateral Speed Skaters",
+                "duration": 40,
+                "rest": 20,
+                "type": "cardio",
+                "intensity": "high"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Standing Quad Stretch (L/R)",
+            "duration": 60,
+            "rest": 0,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Cobra Stretch",
+            "duration": 30,
+            "rest": 0,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Pectoral/Shoulder Stretch",
+            "duration": 30,
+            "rest": 0,
+            "type": "flexibility",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 3420,
+    "name": "HIITProgram"
+}

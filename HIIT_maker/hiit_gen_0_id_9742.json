@@ -1,0 +1,78 @@
+{
+    "warm_up": [
+        {
+            "name": "Dynamic Arm Circles",
+            "duration": 40,
+            "rest": 0,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "Inchworm Walkouts",
+            "duration": 40,
+            "rest": 10,
+            "type": "mobility/strength",
+            "intensity": "medium"
+        },
+        {
+            "name": "Light Alternating Reverse Lunges",
+            "duration": 40,
+            "rest": 0,
+            "type": "cardio",
+            "intensity": "medium"
+        }
+    ],
+    "main_set": {
+        "structure": "Sets For Time",
+        "rounds": 3,
+        "exercises": [
+            {
+                "name": "Dumbbell Thrusters",
+                "duration": 40,
+                "rest": 15,
+                "type": "strength/plyo",
+                "intensity": "high"
+            },
+            {
+                "name": "Mountain Climbers",
+                "duration": 30,
+                "rest": 15,
+                "type": "cardio/core",
+                "intensity": "high"
+            },
+            {
+                "name": "Weighted Glute Bridge Hold",
+                "duration": 50,
+                "rest": 20,
+                "type": "strength",
+                "intensity": "medium"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Standing Quad Stretch (Each Side)",
+            "duration": 40,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Supine Spinal Twist",
+            "duration": 40,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Deep Diaphragmatic Breathing",
+            "duration": 30,
+            "rest": 0,
+            "type": "recovery",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 9742,
+    "name": "HIITProgram"
+}

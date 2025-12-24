@@ -1,0 +1,86 @@
+{
+    "warm_up": [
+        {
+            "name": "High Knees (Light)",
+            "duration": 30,
+            "rest": 10,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Torso Twists (Standing)",
+            "duration": 30,
+            "rest": 10,
+            "type": "mobility",
+            "intensity": "low"
+        },
+        {
+            "name": "Reverse Lunges (Bodyweight)",
+            "duration": 30,
+            "rest": 10,
+            "type": "strength",
+            "intensity": "medium"
+        },
+        {
+            "name": "Plank Hold",
+            "duration": 30,
+            "rest": 0,
+            "type": "core",
+            "intensity": "medium"
+        }
+    ],
+    "main_set": {
+        "structure": "Circuit Repeat",
+        "rounds": 4,
+        "inter_round_rest": 60,
+        "exercises": [
+            {
+                "name": "Jump Squats (Plyo)",
+                "duration": 45,
+                "rest": 15,
+                "type": "plyometric",
+                "intensity": "high"
+            },
+            {
+                "name": "Renegade Rows (Weighted)",
+                "duration": 40,
+                "rest": 20,
+                "type": "strength",
+                "intensity": "medium"
+            },
+            {
+                "name": "Mountain Climbers",
+                "duration": 30,
+                "rest": 30,
+                "type": "cardio",
+                "intensity": "high"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Standing Quad Stretch",
+            "duration": 30,
+            "rest": 0,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Seated Forward Fold",
+            "duration": 45,
+            "rest": 0,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Child's Pose & Breathing",
+            "duration": 45,
+            "rest": 0,
+            "type": "recovery",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 7049,
+    "name": "HIITProgram"
+}

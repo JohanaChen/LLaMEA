@@ -10,6 +10,7 @@ import random
 import re
 import traceback
 import json
+import csv
 
 import numpy as np
 from ConfigSpace import ConfigurationSpace
@@ -20,6 +21,7 @@ from .solution import Solution
 from .utils import NoCodeException, discrete_power_law_distribution, handle_timeout
 
 from HIIT_maker.utils.state import _CHOICE_STATE
+import HIIT_maker.utils.state as state
 from HIIT_maker.evaluation.Hybrid import Hybrid
 
 
@@ -55,6 +57,7 @@ class LLaMEA:
         HPO=False,
         mutation_prompts=None,
         adaptive_mutation=False,
+        mutation_ratio=0.5,  
         budget=100,
         eval_timeout=3600,
         max_workers=10,
@@ -173,6 +176,15 @@ class LLaMEA:
                 "Generate a new HIIT program that explores a different style, intensity distribution, or exercise selection compared to previous programs."
                 # "Generate a complete different HIIT program with completely different style, intensity distribution, and exercise selection compared to previous programs."
             ]
+        self.refine_prompt = (
+            "Refine the strategy of the selected solution to improve coherence, pacing, "
+            "intensity distribution, and exercise selection, while keeping the structure similar."
+        )
+
+        self.redesign_prompt = (
+            "Generate a completely new HIIT program that significantly differs in structure, "
+            "style, intensity distribution, or exercise selection from previous programs."
+)
         self.budget = budget
         self.n_parents = n_parents
         self.n_offspring = n_offspring
@@ -201,7 +213,9 @@ class LLaMEA:
         if max_workers > self.n_offspring:
             max_workers = self.n_offspring
         self.max_workers = max_workers
-        self.choice_state=_CHOICE_STATE
+        self.choice_state = _CHOICE_STATE
+        self.mutation_ratio = float(mutation_ratio)
+        self.fitness_history = []
 
     def logevent(self, event):
         self.textlog.info(event)
@@ -304,6 +318,27 @@ class LLaMEA:
         updated_individual = self.f(individual, self.logger)
         return updated_individual
 
+    def save_fitness_history(self, filepath):
+        with open(filepath, "w", newline="") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=["generation", "fitness", "mutation_type"]
+            )
+            writer.writeheader()
+            writer.writerows(self.fitness_history)
+
+    def select_mutation_operator(self):
+        if random.random() < self.mutation_ratio:
+            mutation_type = "refine"
+            prompt = self.refine_prompt
+        else:
+            mutation_type = "redesign"
+            prompt = self.redesign_prompt
+
+        if self.logger:
+            logging.info(f"[Mutation] Selected {mutation_type} (ratio={self.mutation_ratio})")
+        return prompt, mutation_type
+
     def construct_prompt(self, individual):
         """
         Constructs a new session prompt for the language model based on a selected HIIT plan.
@@ -333,7 +368,12 @@ class LLaMEA:
             new_mutation_prompt = (f"Improve this HIIT plan by changing about {lines_to_change} lines ({(prob*100):.1f}% of the content). Keep the rest unchanged")
             self.mutation_prompts = [new_mutation_prompt]
 
-        mutation_operator = random.choice(self.mutation_prompts)
+        # Random mutation operator selection (ORIGINAL)
+        # mutation_operator = random.choice(self.mutation_prompts)
+
+        # Adaptive mutation operator selection
+        mutation_operator, mutation_type = self.select_mutation_operator()
+
         individual.set_operator(mutation_operator)
 
         # Prepare the JSON plan as a formatted string for the prompt
@@ -370,6 +410,14 @@ With user feedback:
         final_prompt += f"\n\nSystem feedback: {system_fb}"
         if user_fb:
             final_prompt += f"\n\nUser feedback from the last round: {user_fb}"
+
+        # --- ADD MEMORY FEEDBACK ---
+        mem = state._CHOICE_STATE.get("feedback_memory", [])
+        if mem:
+            # memory_lines = "\n".join(f"- {m['text']}" for m in mem)
+            memory_lines = "\n".join(f"- {fb}" for fb in mem)
+            final_prompt += f"\n\nUSER FEEDBACK TO REMEMBER (from previous rounds):\n{memory_lines}\n"
+
 
         session_messages = [
             {"role": "user", "content": self.role_prompt + final_prompt},
@@ -507,6 +555,8 @@ With user feedback:
         self.initialize()  # Initialize a population
         # self.progress_bar.update(self.n_parents)
 
+        self.fitness_history = []
+
         if self.log:
             self.logger.log_population(self.population)
 
@@ -546,6 +596,12 @@ With user feedback:
             # Update population and the best solution
             self.population = self.selection(self.population, new_population)
             self.update_best()
+
+            # Save fitness history
+            self.fitness_history.append({
+                "generation": self.generation,
+                "fitness": self.best_so_far.fitness,
+            })
             self.logevent(
                 f"Generation {self.generation}, best so far: {self.best_so_far.fitness}"
             )

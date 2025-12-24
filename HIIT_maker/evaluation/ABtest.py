@@ -106,6 +106,11 @@ class ABtest:
 
         S = state._CHOICE_STATE 
 
+        # # Memory decay
+        # for entry in S["feedback_memory"]:
+        #     entry["ttl"] -= 1
+        # S["feedback_memory"] = [e for e in S["feedback_memory"] if e["ttl"] > 0]
+
         # First ever program becomes the incumbent (A)
         if S["incumbent_id"] is None:
             S["incumbent_id"] = rid
@@ -170,16 +175,15 @@ class ABtest:
         user_feedback = input("Any feedback for improving the next workout? (press Enter to skip): ").strip()
         if user_feedback:
             # save it somewhere
+            # S["feedback_memory"].append({
+            #     "text": user_feedback,
+            #     "ttl": state.MEMORY_SPAN
+            # })
+            S["feedback_memory"].append(user_feedback)
             S["last_feedback"] = user_feedback
             S["incumbent_feedback"] = user_feedback
             if chosen_incumbent is not None: # Choice B
                 chosen_incumbent.last_feedback = user_feedback
-        else: 
-            S["last_feedback"] = None
-            S["incumbent_feedback"] = None
-            if chosen_incumbent is not None: # Choice B
-                chosen_incumbent.last_feedback = None
-
 
         _log(logger, feedback)
         solution.set_scores(fitness=fitness, feedback=feedback)

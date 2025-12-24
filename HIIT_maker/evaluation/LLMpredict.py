@@ -83,6 +83,11 @@ class LLMpredict:
         if not isinstance(data, dict) or not all(k in data for k in required_keys):
             raise ValueError(f"Evaluation LLM did not return valid JSON after repair.\nSnippet:\n{raw2[:800]}")
         return data
+
+    def score_gaussian(self, x, target, sigma):
+        """Compute a Gaussian score for a value x given target and sigma."""
+        return math.exp(-((x - target) ** 2) / (2 * sigma ** 2))
+
     
     def fitness(self, pred: Dict[str, Any], hr_max: int = 190, weights: Dict[str, float] = None) -> float:
         """
@@ -230,13 +235,34 @@ class LLMpredict:
         z_work = clamp(avg_work_ratio)
         z_variety = clamp(variety)
 
+        # Apply Gaussian scoring 
+        # 1) HR & power: want challenging but safe
+        score_hr = self.score_gaussian(z_hr, target=0.80, sigma=0.10)  # 70–90% HRmax ≈ good
+        score_power = self.score_gaussian(z_power, target=0.60, sigma=0.20) 
+
+        # 2) Work ratio: want dense but not insane (e.g., 60–75% work)
+        score_work = self.score_gaussian(z_work, target=0.65, sigma=0.15)
+
+        # 3) Intensity: prefer moderately high average intensity
+        score_intensity = self.score_gaussian(z_intensity, target=0.75, sigma=0.10)
+
+        # 4) Variety: more is better, but with saturation
+        score_variety = 1.0 - math.exp(-3.0 * z_variety)  # fast rise, then plateau
+
         # --- Weighted hybrid formula ---
+        # u = (
+        #     weights["hr"] * tanh(z_hr) +
+        #     weights["power"] * tanh(z_power) +
+        #     weights["work"] * z_work +
+        #     weights["intensity"] * z_intensity +
+        #     weights["variety"] * z_variety
+        # )
         u = (
-            weights["hr"] * tanh(z_hr) +
-            weights["power"] * tanh(z_power) +
-            weights["work"] * z_work +
-            weights["intensity"] * z_intensity +
-            weights["variety"] * z_variety
+            weights["hr"] * score_hr +
+            weights["power"] * score_power +
+            weights["work"] * score_work +
+            weights["intensity"] * score_intensity +
+            weights["variety"] * score_variety
         )
 
         score = sigmoid(5 * (u - 0.5))

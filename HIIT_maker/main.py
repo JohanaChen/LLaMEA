@@ -44,6 +44,7 @@ if __name__ == "__main__":
     # Configure the Gemini API
     genai.configure(api_key=api_key)
     llm = Gemini_LLM(api_key, "gemini-flash-latest")
+    # llm = Gemini_LLM(api_key, "gemini-3-flash-preview")
 
     # Load prompt
     task_prompt = load_prompt("prompts/hiit_prompt.jinja2")
@@ -60,20 +61,38 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Unknown evaluator: {args.evaluator}")
 
-    # A 1+1 strategy
-    reset_choice_state()
-    es = LLaMEA(
-        f=evaluator.evaluate_HIIT,
-        n_parents=1,
-        n_offspring=1,
-        llm=llm,
-        task_prompt=task_prompt,
-        experiment_name="hiit1",
-        elitism=True,
-        HPO=False,
-        budget=10,
-        max_workers=1,
-    )
-    result = es.run()
-    if hasattr(result, "data"):
-        save_json_result(result.data, name_prefix="hiit_best")
+    mutation_ratios = [0.7]
+    num_runs = 1
+
+    for ratio in mutation_ratios:
+        for run in range(num_runs):
+            print(f"Running experiment: ratio={ratio}, run={run}")
+            # A 1+1 strategy
+            reset_choice_state()
+            es = LLaMEA(
+                f=evaluator.evaluate_HIIT,
+                n_parents=1,
+                n_offspring=1,
+                llm=llm,
+                task_prompt=task_prompt,
+                experiment_name="hiit1",
+                elitism=True,
+                HPO=False,
+                budget=10,
+                max_workers=1,
+                mutation_ratio=ratio,        # added mutation ratio
+                adaptive_mutation=False,
+            )
+            result = es.run()
+            # Save fitness history
+            es.save_fitness_history(f"Results/ratio_{ratio}_run_{run}.csv")
+
+            if hasattr(result, "data"):
+                run_dir = os.path.abspath(es.logger.dirname)
+                final_path = os.path.join(run_dir, "final_best.json")
+
+                with open(final_path, "w") as f:
+                    json.dump(result.data, f, indent=2)
+
+                print(f"Saved final best to: {final_path}")
+

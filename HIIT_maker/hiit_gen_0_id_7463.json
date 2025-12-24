@@ -1,0 +1,92 @@
+{
+    "warm_up": [
+        {
+            "name": "Jog in Place",
+            "duration": 60,
+            "rest": 15,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Dynamic Lunges",
+            "duration": 45,
+            "rest": 15,
+            "type": "mobility",
+            "intensity": "medium"
+        },
+        {
+            "name": "Arm Circles",
+            "duration": 30,
+            "rest": 10,
+            "type": "mobility",
+            "intensity": "low"
+        }
+    ],
+    "main_set": {
+        "structure": "Circuit",
+        "rounds": 4,
+        "exercises": [
+            {
+                "name": "Kettlebell Swings",
+                "duration": 40,
+                "rest": 20,
+                "type": "strength",
+                "intensity": "high"
+            },
+            {
+                "name": "Box Jumps",
+                "duration": 30,
+                "rest": 30,
+                "type": "plyometric",
+                "intensity": "high"
+            },
+            {
+                "name": "Renegade Rows",
+                "duration": 45,
+                "rest": 15,
+                "type": "strength",
+                "intensity": "medium"
+            },
+            {
+                "name": "Mountain Climbers",
+                "duration": 30,
+                "rest": 20,
+                "type": "cardio",
+                "intensity": "high"
+            },
+            {
+                "name": "Plank Shoulder Taps",
+                "duration": 50,
+                "rest": 10,
+                "type": "core",
+                "intensity": "medium"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Downward Dog",
+            "duration": 45,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Pigeon Stretch",
+            "duration": 60,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Child's Pose",
+            "duration": 60,
+            "rest": 0,
+            "type": "recovery",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 7463,
+    "name": "HIITProgram"
+}

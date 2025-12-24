@@ -1,0 +1,78 @@
+{
+    "warm_up": [
+        {
+            "name": "High Knees",
+            "duration": 40,
+            "rest": 10,
+            "type": "cardio",
+            "intensity": "low"
+        },
+        {
+            "name": "Reverse Lunges",
+            "duration": 40,
+            "rest": 10,
+            "type": "strength",
+            "intensity": "medium"
+        },
+        {
+            "name": "Shoulder Circles (Dynamic)",
+            "duration": 40,
+            "rest": 20,
+            "type": "mobility",
+            "intensity": "low"
+        }
+    ],
+    "main_set": {
+        "structure": "Circuit",
+        "rounds": 4,
+        "exercises": [
+            {
+                "name": "Weighted Thrusters",
+                "duration": 45,
+                "rest": 15,
+                "type": "strength/plyo",
+                "intensity": "high"
+            },
+            {
+                "name": "Lateral Bounds",
+                "duration": 30,
+                "rest": 15,
+                "type": "plyometric",
+                "intensity": "high"
+            },
+            {
+                "name": "Plank Jacks",
+                "duration": 40,
+                "rest": 20,
+                "type": "core/cardio",
+                "intensity": "medium"
+            }
+        ]
+    },
+    "cool_down": [
+        {
+            "name": "Standing Quad Stretch",
+            "duration": 45,
+            "rest": 15,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Triceps Stretch",
+            "duration": 30,
+            "rest": 10,
+            "type": "flexibility",
+            "intensity": "low"
+        },
+        {
+            "name": "Butterfly Stretch (Seated)",
+            "duration": 60,
+            "rest": 0,
+            "type": "flexibility",
+            "intensity": "low"
+        }
+    ],
+    "generation": 0,
+    "id": 3685,
+    "name": "HIITProgram"
+}
