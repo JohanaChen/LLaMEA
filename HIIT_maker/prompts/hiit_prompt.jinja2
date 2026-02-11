@@ -7,15 +7,18 @@ The program must:
 - Vary in types of exercises, training structures, durations, rest periods, and intensities.
 - Include a wide variety of exercise types, such as bodyweight, weighted/barbell-style, plyometric, core, or mobility exercises, to keep the session diverse and engaging.
 - Vary the duration of exercises, not all should have similar times.
+- Only add exercises doable at home with minimal or no equitment.
 
 Each exercise object must have:
 - `"name"` (string)
 - `"duration"` (seconds, integer)
 - `"rest"` (seconds, integer)
-- `"type"` (e.g. "cardio", "strength", "core", "flexibility")
+- `"type"` (e.g. "cardio", "strength", "core", "flexibility", "stretching")
 - `"intensity"` (low, medium, or high)
 
-The `"main_set"` can include one optional `"structure"` field (e.g. "AMRAP", "EMOM", "Tabata"), but avoid nested blocks or overly complex structures.
+The `"main_set"` can include one optional `"structure"` field (e.g. "AMRAP", "EMOM", "Tabata").  
+When a structure is provided, all exercise durations, rest periods, and repetitions must be consistent with the defined structure's timing constraints (e.g., "EMOM" requires 60-second work intervals aligned to each minute).
+Avoid nested blocks or overly complex structures.
 
 Output **only JSON**, no code fences, no explanations.
 
@@ -29,7 +32,7 @@ Example:
     { "name": "Arm Circles", "duration": 20, "rest": 10, "type": "mobility", "intensity": "low" }
   ],
   "main_set": {
-    "structure": "EMOM",
+    "structure": "Tabata",
     "rounds": 4,
     "exercises": [
       { "name": "Burpees", "duration": 40, "rest": 20, "type": "cardio", "intensity": "high" },

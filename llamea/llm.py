@@ -277,8 +277,18 @@ class OpenAI_LLM(LLM):
             model (str, optional): model abbreviation. Defaults to "gpt-4-turbo".
                 Options are: gpt-3.5-turbo, gpt-4-turbo, gpt-4o, and others from OpeNAI models library.
         """
-        super().__init__(api_key, model, None, **kwargs)
+        # super().__init__(api_key, model, None, **kwargs)
+        base_url = kwargs.pop("base_url", None)
+        super().__init__(
+            api_key=api_key,
+            model=model,
+            base_url=base_url,
+            **kwargs
+        )
         self._client_kwargs = dict(api_key=api_key)
+        if base_url is not None:
+            self._client_kwargs["base_url"] = base_url
+        self._client_kwargs["timeout"] = 60
         self.client = openai.OpenAI(**self._client_kwargs)
         logging.getLogger("openai").setLevel(logging.ERROR)
         logging.getLogger("httpx").setLevel(logging.ERROR)
@@ -425,6 +435,14 @@ class Gemini_LLM(LLM):
                     wait = int(m.group(1)) if m else default_delay * attempt
 
                 time.sleep(wait)
+
+class DeepSeek_LLM(OpenAI_LLM):
+    def __init__(self, api_key, model):
+        super().__init__(
+            api_key=api_key,
+            model=model,
+            base_url="https://api.deepseek.com"
+        )
 
 
 class Ollama_LLM(LLM):

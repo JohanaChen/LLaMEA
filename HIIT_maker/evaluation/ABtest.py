@@ -39,31 +39,18 @@ class ABtest:
             program += data["cool_down"]
         return program
     
+    def _sec_to_min(self, sec):
+        return round(sec / 60, 1)
+
     def _render_program_markdown(self, data):
-        """Pretty text for the terminal (no external libs)."""
-        try:
-            wu = len(data.get("warm_up", [])) if isinstance(data.get("warm_up", []), list) else 0
-            ms = len(data.get("main_set", {}).get("exercises", [])) if isinstance(data.get("main_set", {}), dict) else 0
-            cd = len(data.get("cool_down", [])) if isinstance(data.get("cool_down", []), list) else 0
-        except Exception:
-            wu, ms, cd = 0, 0, 0
+        """Pretty text for the terminal (no external libs). Shows sections + main_set structure/rounds."""
+        def _safe_list(x):
+            return x if isinstance(x, list) else []
 
-        blocks = []
-        if wu:
-            blocks.append("Warm-up")
-        if ms:
-            blocks.append(f"Main set ({data.get('main_set', {}).get('type', 'structured')})")
-        if cd:
-            blocks.append("Cool-down")
-        header = f"{' · '.join(blocks) or 'HIIT Program'}"
+        def _safe_dict(x):
+            return x if isinstance(x, dict) else {}
 
-        program = self._flatten_program(data)
-        total_work = sum(int(ex.get("duration", 0)) for ex in program)
-        total_rest = sum(int(ex.get("rest", 0)) for ex in program)
-        total = total_work + total_rest
-
-        lines = [f"{header} — ~{total}s total (work {total_work}s / rest {total_rest}s)", ""]
-        for i, ex in enumerate(program, 1):
+        def _fmt_exercise(i, ex):
             name = ex.get("name", "Exercise")
             dur = ex.get("duration", 0)
             rest = ex.get("rest", 0)
@@ -71,8 +58,77 @@ class ABtest:
             intensity = ex.get("intensity", "")
             tag = " · ".join([t for t in [etype, intensity] if t])
             tag = f"  ·  {tag}" if tag else ""
-            lines.append(f"{i:>2}. {name}: {dur}s + {rest}s rest{tag}")
-        return "\n".join(lines) if lines else "(empty program)"
+            return f"{i:>2}. {name}: {dur}s + {rest}s rest{tag}"
+
+        warm_up = _safe_list(data.get("warm_up"))
+        main_set = _safe_dict(data.get("main_set"))
+        main_exercises = _safe_list(main_set.get("exercises"))
+        cool_down = _safe_list(data.get("cool_down"))
+
+        structure = main_set.get("structure") or main_set.get("type") or "Structured"
+        rounds = main_set.get("rounds")
+
+        wu_work = sum(int(ex.get("duration", 0)) for ex in warm_up)
+        wu_rest = sum(int(ex.get("rest", 0)) for ex in warm_up)
+
+        ms_work_one = sum(int(ex.get("duration", 0)) for ex in main_exercises)
+        ms_rest_one = sum(int(ex.get("rest", 0)) for ex in main_exercises)
+
+        cd_work = sum(int(ex.get("duration", 0)) for ex in cool_down)
+        cd_rest = sum(int(ex.get("rest", 0)) for ex in cool_down)
+
+        # Apply rounds to main set
+        ms_work = ms_work_one * rounds
+        ms_rest = ms_rest_one * rounds
+
+        total_work = wu_work + ms_work + cd_work
+        total_rest = wu_rest + ms_rest + cd_rest
+        total = total_work + total_rest
+
+        # Convert to minutes
+        total_work_m = self._sec_to_min(total_work)
+        total_rest_m = self._sec_to_min(total_rest)
+        total_m = self._sec_to_min(total)
+
+        # Header
+        round_str = f" | Rounds: {rounds}" if rounds is not None else ""
+        header = f"{structure}{round_str} — ~{total_m}min total (work {total_work_m}min / rest {total_rest_m}min)"
+
+        lines = [header, ""]
+
+        idx = 1
+
+        # Warm-up section
+        if warm_up:
+            lines.append("=== Warm-up ===")
+            for ex in warm_up:
+                lines.append(_fmt_exercise(idx, ex))
+                idx += 1
+            lines.append("")
+
+        # Main set section
+        if main_exercises:
+            lines.append("=== Main set ===")
+            # Print main set meta clearly
+            meta = f"Structure: {structure}"
+            if rounds is not None:
+                meta += f" | Rounds: {rounds}"
+            lines.append(meta)
+            lines.append("")
+            for ex in main_exercises:
+                lines.append(_fmt_exercise(idx, ex))
+                idx += 1
+            lines.append("")
+
+        # Cool-down section
+        if cool_down:
+            lines.append("=== Cool-down ===")
+            for ex in cool_down:
+                lines.append(_fmt_exercise(idx, ex))
+                idx += 1
+
+        return "\n".join(lines) if len(lines) > 1 else "(empty program)"
+
     
     def evaluate_HIIT(self, solution, logger=None):
         
@@ -106,11 +162,6 @@ class ABtest:
 
         S = state._CHOICE_STATE 
 
-        # # Memory decay
-        # for entry in S["feedback_memory"]:
-        #     entry["ttl"] -= 1
-        # S["feedback_memory"] = [e for e in S["feedback_memory"] if e["ttl"] > 0]
-
         # First ever program becomes the incumbent (A)
         if S["incumbent_id"] is None:
             S["incumbent_id"] = rid
@@ -136,6 +187,7 @@ class ABtest:
         # A vs B
         print("\n-------------------------------------------")
         print("Incumbent [A]\n" + incumbent_render)
+        print("\n-------------------------------------------")
         print("\nCandidate [B]\n" + rendered)
         print("\nType A / B / T (tie → random) or STOP (to finish): ")
 
@@ -174,11 +226,6 @@ class ABtest:
 
         user_feedback = input("Any feedback for improving the next workout? (press Enter to skip): ").strip()
         if user_feedback:
-            # save it somewhere
-            # S["feedback_memory"].append({
-            #     "text": user_feedback,
-            #     "ttl": state.MEMORY_SPAN
-            # })
             S["feedback_memory"].append(user_feedback)
             S["last_feedback"] = user_feedback
             S["incumbent_feedback"] = user_feedback

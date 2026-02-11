@@ -177,8 +177,9 @@ class LLaMEA:
                 # "Generate a complete different HIIT program with completely different style, intensity distribution, and exercise selection compared to previous programs."
             ]
         self.refine_prompt = (
-            "Refine the strategy of the selected solution to improve coherence, pacing, "
-            "intensity distribution, and exercise selection, while keeping the structure similar."
+            "Make small, incremental improvements to the HIIT program by slightly adjusting exercise order, " 
+            "work/rest timing, or replacing at most one exercise with a similar alternative to improve pacing, " 
+            "intensity balance, and physiological realism, while preserving the overall structure, format, and total duration."
         )
 
         self.redesign_prompt = (
@@ -329,11 +330,11 @@ class LLaMEA:
 
     def select_mutation_operator(self):
         if random.random() < self.mutation_ratio:
-            mutation_type = "refine"
-            prompt = self.refine_prompt
-        else:
             mutation_type = "redesign"
             prompt = self.redesign_prompt
+        else:
+            mutation_type = "refine"
+            prompt = self.refine_prompt
 
         if self.logger:
             logging.info(f"[Mutation] Selected {mutation_type} (ratio={self.mutation_ratio})")
@@ -556,6 +557,13 @@ With user feedback:
         # self.progress_bar.update(self.n_parents)
 
         self.fitness_history = []
+
+        self.fitness_history.append(
+            {
+                "generation": 0,
+                "fitness": self.best_so_far.fitness,
+            }
+        )
 
         if self.log:
             self.logger.log_population(self.population)

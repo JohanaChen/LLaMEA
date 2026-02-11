@@ -9,7 +9,7 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from HIIT_maker.utils.io_utils import save_json_result
-from llamea import LLaMEA, Gemini_LLM
+from llamea import LLaMEA, Gemini_LLM, OpenAI_LLM
 from evaluation.ABtest import ABtest
 from evaluation.LLMpredict import LLMpredict
 # from evaluation.LLMchoose import LLMchoose
@@ -37,14 +37,13 @@ if __name__ == "__main__":
 
     # LLM setup
     load_dotenv()
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in .env file")
+        raise ValueError("OPENAI_API_KEY not found in .env file")
     
-    # Configure the Gemini API
-    genai.configure(api_key=api_key)
-    llm = Gemini_LLM(api_key, "gemini-flash-latest")
-    # llm = Gemini_LLM(api_key, "gemini-3-flash-preview")
+    # Configure the OPENAI API
+    # genai.configure(api_key=api_key)
+    llm = OpenAI_LLM(api_key, "gpt-4o-mini")
 
     # Load prompt
     task_prompt = load_prompt("prompts/hiit_prompt.jinja2")

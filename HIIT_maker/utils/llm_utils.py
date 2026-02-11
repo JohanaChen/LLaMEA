@@ -65,6 +65,11 @@ def _find_gemini_model(obj):
 
 def _llm_complete(llm, prompt: str, temperature: float = 0.2, max_tokens: int = 1200) -> str:
     """Accepts many client shapes and returns plain text."""
+    # DeepSeek-style wrapper
+    if hasattr(llm, "query") and callable(llm.query):
+        messages = [{"role": "user", "content": prompt}]
+        return llm.query(messages)
+
     # 1) Your wrapper with .complete(prompt, …)
     if hasattr(llm, "complete") and callable(llm.complete):
         return llm.complete(prompt, temperature=temperature, max_tokens=max_tokens)
@@ -112,4 +117,8 @@ def _llm_complete(llm, prompt: str, temperature: float = 0.2, max_tokens: int = 
                 resp = _maybe_call(fn, prompt)
             # If it already returned a string, great; else extract text
             return resp if isinstance(resp, str) else _extract_text_from_response(resp)
+        
+    
+        
+    raise RuntimeError(f"_llm_complete: Unsupported LLM interface: {type(llm)}")
             

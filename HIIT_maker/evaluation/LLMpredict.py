@@ -50,39 +50,80 @@ class LLMpredict:
             t += dur + rest
         return f"TOTAL_DURATION_SEC={t}\n" + "\n".join(lines)
 
-    def predict_hr_power(self, llm_eval, prompt: str, max_retries: int = 1, logger=None):
-        """Predict both heart rate and power output for the HIIT program."""
-        raw = _llm_complete(llm_eval, prompt, temperature=0.2, max_tokens=9000)  # bump tokens a bit
-        try:
-            s, e = raw.find("{"), raw.rfind("}")
-            candidate = raw[s:e+1] if s != -1 and e != -1 else raw
-            data = _coerce_json(candidate)
-            required_keys = ["summary", "per_interval_hr", "per_interval_power"]
-            if not all(k in data for k in required_keys):
-                raise ValueError("Missing required keys in predicted_hr_power JSON")
-            if not isinstance(data, dict):
-                raise ValueError(f"Evaluation LLM did not return a valid JSON object.\nSnippet:\n{raw[:500]}")
-            return data
-        
-        except Exception:
-            if max_retries <= 0:
-                raise ValueError(f"Evaluation LLM did not return valid JSON.\nSnippet:\n{raw[:800]}")
 
-        # Attempt 2 — have the model repair its own output
-        repair_prompt = (
-            "The following was intended to be STRICT JSON but is invalid or incomplete. "
-            "Return a corrected JSON ONLY (no code fences, no prose), matching the schema I gave earlier.\n\n"
-            "INVALID_JSON:\n" + raw[:4000]
-        )
-        raw2 = _llm_complete(llm_eval, repair_prompt, temperature=0.0, max_tokens=9000)
-        s, e = raw2.find("{"), raw2.rfind("}")
-        candidate = raw2[s:e+1] if s != -1 and e != -1 else raw2
-        data = _coerce_json(candidate)
+    def predict_hr_power(
+        self,
+        llm_eval,
+        prompt: str,
+        max_retries: int = 1,
+        logger=None,
+    ):
+        """
+        Predict heart rate and power output using an LLM.
+        Uses bounded retries and a self-repair step for invalid JSON.
+        """
+
         required_keys = ["summary", "per_interval_hr", "per_interval_power"]
-        
-        if not isinstance(data, dict) or not all(k in data for k in required_keys):
-            raise ValueError(f"Evaluation LLM did not return valid JSON after repair.\nSnippet:\n{raw2[:800]}")
-        return data
+
+        for attempt in range(max_retries + 1):
+
+            # --- First attempt: normal prediction ---
+            if attempt == 0:
+                raw = _llm_complete(
+                    llm_eval,
+                    prompt,
+                    temperature=0.2,
+                    max_tokens=9000,
+                )
+            else:
+                # --- Repair attempt ---
+                repair_prompt = (
+                    "The following was intended to be STRICT JSON but is invalid or incomplete. "
+                    "Return a corrected JSON ONLY (no code fences, no prose), "
+                    "matching the schema given earlier.\n\n"
+                    "INVALID_JSON:\n" + raw[:4000]
+                )
+                raw = _llm_complete(
+                    llm_eval,
+                    repair_prompt,
+                    temperature=0.0,
+                    max_tokens=9000,
+                )
+
+            try:
+                # --- Extract JSON candidate ---
+                s, e = raw.find("{"), raw.rfind("}")
+                candidate = raw[s : e + 1] if s != -1 and e != -1 else raw
+
+                data = _coerce_json(candidate)
+
+                if not isinstance(data, dict):
+                    raise ValueError("Returned JSON is not a dictionary")
+
+                if not all(k in data for k in required_keys):
+                    raise ValueError(
+                        f"Missing required keys. Found: {list(data.keys())}"
+                    )
+
+                return data
+
+            except Exception as e:
+                if logger:
+                    logger.warning(
+                        f"[HR/Power predictor] Attempt {attempt + 1} failed: {e}"
+                    )
+
+                if attempt >= max_retries:
+                    # ❌ All attempts exhausted → hard failure
+                    raise ValueError(
+                        "Evaluation LLM did not return valid JSON after "
+                        f"{max_retries + 1} attempts.\n"
+                        f"Last output snippet:\n{raw[:800]}"
+                    ) from e
+
+                # Otherwise: retry (loop continues)
+
+
 
     def score_gaussian(self, x, target, sigma):
         """Compute a Gaussian score for a value x given target and sigma."""
@@ -184,12 +225,17 @@ class LLMpredict:
             intensity_label = str(ex.get("intensity", "medium")).lower()
             name = str(ex.get("name", "")).lower().strip()
 
+            # print("name =", name)
+            # print("hr_predictions[name] =", hr_predictions.get(name))
+            # print("power_predictions[name] =", power_predictions.get(name))
+
             # Retrieve matching HR and power data (if available)
-            hr_data = hr_predictions.get(name, {})
-            power_data = power_predictions.get(name, {})
+            hr_data = hr_predictions.get(name) or {}
+            power_data = power_predictions.get(name) or {}
 
             pred_hr = float(hr_data.get("avg_hr") or 0.0)
             pred_power = float(power_data.get("avg_power") or 0.0)
+            
 
             hr_ratio = pred_hr / hr_max if pred_hr > 0 else 0.0
             power_ratio = pred_power / 500.0 if pred_power > 0 else 0.0  
@@ -268,15 +314,6 @@ class LLMpredict:
         score = sigmoid(5 * (u - 0.5))
         return clamp(score)
 
-
-    # def _infer_hr_max(self, pred, default=200):
-    #     txt = (pred.get("assumptions") or "") + " " + str(pred.get("summary", {}))
-    #     m = re.search(r'(\d{2,3})\s*(?:bpm|HRmax)', txt, flags=re.I)
-    #     if m:
-    #         val = int(m.group(1))
-    #         if 150 <= val <= 220:
-    #             return val
-    #     return default
     
     def _infer_hr_max(self, pred, default=200):
         if not isinstance(pred, dict):
@@ -301,86 +338,126 @@ class LLMpredict:
             # Parse JSON input
             data = _coerce_json(solution.data)
 
-            # Collect exercises from JSON structure
-            if "warm_up" in data:
-                program += data["warm_up"]
-            if "main_set" in data and "exercises" in data["main_set"]:
-                program += data["main_set"]["exercises"]
-            if "cool_down" in data:
-                program += data["cool_down"]
+        except Exception as e:
+            fitness_score = -np.inf
+            feedback = f"Invalid JSON: {e} | Raw text: {solution.data}"
+            _log(logger, feedback)
+            solution.set_scores(fitness=fitness_score, feedback=feedback)
+            return solution
+        
+
+        # -----------------------------
+        # Phase 1: Program extraction
+        # -----------------------------
+        try:
+            program = []
+
+            # Warm-up
+            program += data.get("warm_up") or []
+
+            # Main set
+            main = data.get("main_set") or {}
+            program += main.get("exercises") or []
+
+            # Cool-down
+            program += data.get("cool_down") or []
+
+            # Filter malformed entries
+            program = [ex for ex in program if isinstance(ex, dict)]
 
             if not program:
-                raise ValueError("No exercises found in JSON input.")
+                raise ValueError("No valid exercises found in JSON input.")
+        except Exception as e:
+            fitness_score = -np.inf
+            feedback = f"Invalid program structure: {e} | Raw text: {solution.data}"
+            _log(logger, feedback)
+            solution.set_scores(fitness=fitness_score, feedback=feedback)
+            return solution
 
+        # -----------------------------
+        # Phase 2: HR / Power prediction
+        # -----------------------------
+        if llm_eval is None:
+            llm_eval = globals().get("llm")
             if llm_eval is None:
-                try: 
-                    llm_eval = globals().get("llm")
-                except KeyError:
-                    raise RuntimeError("llm_eval is None and no global 'llm' found.")
-                
+                fitness_score = -np.inf
+                feedback = "llm_eval is None and no global 'llm' found."
+                _log(logger, feedback)
+                solution.set_scores(fitness=fitness_score, feedback=feedback)
+                return solution
+
+        try:
             program_text = self._render_program_text(program)
             prompt = self.make_prompt(program_text)
             predictions = self.predict_hr_power(llm_eval, prompt)
+
             if predictions is None:
-                raise ValueError("❌ LLM returned None instead of predictions.")
+                raise ValueError("LLM returned None instead of predictions.")
 
-            # Extract heart rate and power predictions
-            predicted_hr = predictions["summary"].get("avg_hr", None)
-            predicted_power = predictions["summary"].get("avg_power", None)
-
+            summary = predictions.get("summary") or {}
             hr_max = self._infer_hr_max(predictions, default=200)
+        except Exception as e:
+            fitness_score = -np.inf
+            feedback = f"HR/Power prediction failed: {e}"
+            _log(logger, feedback)
+            solution.set_scores(fitness=fitness_score, feedback=feedback)
+            return solution
 
-            total_work = sum(int(ex.get("duration", 0)) for ex in program)
-            total_rest = sum(int(ex.get("rest", 0)) for ex in program)
+        # -----------------------------
+        # Phase 3: Fitness computation
+        # -----------------------------
+        try:
+            total_work = sum(float(ex.get("duration", 0)) for ex in program)
+            total_rest = sum(float(ex.get("rest", 0)) for ex in program)
             total_duration = total_work + total_rest
             num_exercises = len(program)
 
-            # --- Write predictions back into JSON and persist on solution ---
+            # Attach predictions to data
             data["predicted_hr"] = {
-                "summary": predictions.get("summary", {}),
-                "per_interval_hr": predictions.get("per_interval_hr", [])
+                "summary": summary,
+                "per_interval_hr": predictions.get("per_interval_hr", []),
             }
 
             data["predicted_power"] = {
-                "per_interval_power": predictions.get("per_interval_power", [])
+                "per_interval_power": predictions.get("per_interval_power", []),
             }
 
-            # --- Compute fitness ---
+            # Compute fitness
             fitness_score = self.fitness(data, hr_max)
-
             data["fitness"] = fitness_score
-            # Store back to solution.data as a JSON string
-            # solution.data = json.dumps(data, ensure_ascii=False, indent=2)
+
+            # Persist updated solution
             solution.data = data
-            save_json_result(data, name_prefix="hiit_candidate_with_predictions")   
+            save_json_result(data, name_prefix="hiit_candidate_with_predictions")
 
             feedback = (
-                f"Evaluated with HR/Power prediction: {num_exercises} exercises, "
-                f"total duration {total_duration}s, "
+                f"Evaluated successfully: {num_exercises} exercises, "
+                f"total duration {total_duration:.0f}s, "
                 f"fitness {fitness_score:.3f}"
             )
-
-        except json.JSONDecodeError as e:
-            fitness_score = -np.inf
-            feedback = f"Invalid JSON: {e} | Raw text: {solution.data}"
         except Exception as e:
             fitness_score = -np.inf
-            feedback = f"Error during evaluation: {e} | Raw text: {solution.data}"
+            feedback = f"Fitness computation failed: {e}"
+            _log(logger, feedback)
+            solution.set_scores(fitness=fitness_score, feedback=feedback)
+            return solution
 
+        # -----------------------------
+        # Finalize
+        # -----------------------------
         _log(logger, feedback)
-
         solution.set_scores(fitness=fitness_score, feedback=feedback)
 
-        # Update glocal choice
-        try :
+        # Update global choice state (best-so-far)
+        try:
             if S["incumbent_id"] is None or fitness_score > S["fitness_score"]:
-                S["incumbent_id"] = getattr(solution, "id", "unkown")
-                S["incumbent_json"] = getattr(solution, "data", {})
+                S["incumbent_id"] = getattr(solution, "id", "unknown")
+                S["incumbent_json"] = solution.data
                 S["incumbent_render"] = getattr(solution, "description", "")
                 S["fitness_score"] = fitness_score
         except Exception as e:
             if logger:
-                logger.warning(f"[Hybrid] Could not update incumbent after LLMpredict: {e}")
+                logger.warning(f"[Hybrid] Could not update incumbent: {e}")
 
         return solution
 
